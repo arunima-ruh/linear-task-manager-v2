@@ -54,12 +54,27 @@ Linear API → linear-cli → wrapper → entity_issues (data-ingestion)
 - Telegram configured in OpenClaw
 - linear-cli installed: `npm install -g linear-cli`
 
+### Quick Start Scripts
+
+We provide helper scripts for easy setup:
+
+```bash
+# 1. Install dependencies (curl, jq, python3, linear-cli)
+./install-dependencies.sh
+
+# 2. Check environment (validates all requirements)
+./check-environment.sh
+
+# 3. Test workflow manually (dry-run without OpenClaw)
+./test-workflow.sh
+```
+
 ### Installation
 
 **Step 1: Clone the Repository**
 ```bash
-git clone git@github.com:arunima-ruh/linear-task-manager.git
-cd linear-task-manager
+git clone git@github.com:arunima-ruh/linear-task-manager-v2.git
+cd linear-task-manager-v2
 ```
 
 **Step 2: Copy Files to OpenClaw Instance**
@@ -101,14 +116,40 @@ TELEGRAM_CHAT_ID=your_telegram_user_id
 
 **Step 4: Install Dependencies**
 ```bash
-# Install linear-cli globally
+# Option A: Use the install script (recommended)
+./install-dependencies.sh
+
+# Option B: Manual installation
 npm install -g linear-cli
 
 # Verify installation
 linear --version
 ```
 
-**Step 5: Restart OpenClaw**
+**Step 5: Validate Environment (Recommended)**
+```bash
+# Run the environment checker
+./check-environment.sh
+
+# This will verify:
+# - All required binaries are installed (curl, jq, python3, linear)
+# - Environment variables are set correctly
+# - Data Ingestion Service is reachable
+# - Linear API key is valid
+```
+
+**Step 6: (Optional) Test Workflow Manually**
+```bash
+# Test the workflow without OpenClaw
+./test-workflow.sh
+
+# This simulates what the agent will do:
+# - Fetches your Linear tasks
+# - Transforms and writes to data-ingestion
+# - Verifies the data pipeline works
+```
+
+**Step 7: Restart OpenClaw**
 ```bash
 cd $OPENCLAW_PATH
 openclaw gateway restart
@@ -213,6 +254,32 @@ Edit `skills/linear-to-ingestion-wrapper/SKILL.md`:
 
 ---
 
+## Helper Scripts (Developer Tools)
+
+We provide executable scripts to help with setup and testing:
+
+| Script | Purpose |
+|--------|---------|
+| `install-dependencies.sh` | Installs all required system packages and linear-cli |
+| `check-environment.sh` | Validates that all dependencies and env vars are correct |
+| `test-workflow.sh` | Manually tests the data pipeline (fetch → transform → write) |
+
+**Usage:**
+```bash
+# 1. Install everything
+./install-dependencies.sh
+
+# 2. Check if ready
+./check-environment.sh
+
+# 3. Test the workflow
+./test-workflow.sh
+```
+
+These scripts are **optional** but highly recommended for troubleshooting.
+
+---
+
 ## Files Included
 
 ```
@@ -221,6 +288,9 @@ linear-task-manager/
 ├── README.md                                   ← This file
 ├── .env.example                                ← Env var template
 ├── .gitignore                                  ← Standard ignores
+├── install-dependencies.sh                     ← Install script
+├── check-environment.sh                        ← Environment validator
+├── test-workflow.sh                            ← Workflow tester
 ├── cron/
 │   └── daily-digest.json                       ← OpenClaw cron job
 ├── workflows/
