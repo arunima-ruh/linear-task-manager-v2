@@ -36,6 +36,7 @@ check_binary "python3" "apt-get install python3"
 check_binary "node" "Install from https://nodejs.org"
 check_binary "npm" "Install from https://nodejs.org"
 check_binary "linear" "npm install -g linear-cli"
+check_binary "uuidgen" "apt-get install uuid-runtime"
 
 echo ""
 echo "=== Checking Environment Variables ==="
@@ -56,6 +57,7 @@ check_env() {
 }
 
 check_env "LINEAR_API_KEY"
+check_env "LINEAR_TOKEN"
 check_env "DATA_INGESTION_BASE_URL"
 check_env "DATA_INGESTION_ORG_ID"
 check_env "DATA_INGESTION_AGENT_ID"

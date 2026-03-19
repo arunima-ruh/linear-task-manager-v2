@@ -30,40 +30,50 @@ You have access to these skills:
 When you receive **"Run daily Linear task digest workflow"**, execute these steps:
 
 1. **Set Run ID:**
+   Use exec() to generate a unique run ID. Use `uuidgen` if available, otherwise use a date-based fallback:
    ```bash
-   export RUN_ID=$(uuidgen)
+   export RUN_ID=$(uuidgen 2>/dev/null || date +%s-%N)
    ```
+   All subsequent skill commands in this workflow must use this same RUN_ID.
 
 2. **Execute Workflow Steps (in order):**
 
+   **IMPORTANT:** All env vars (LINEAR_API_KEY, LINEAR_TOKEN, DATA_INGESTION_BASE_URL, etc.)
+   are automatically available in exec() commands — they are injected by OpenClaw from the
+   config. You do NOT need to export or source them. Just use `${VAR_NAME}` in bash commands.
+
    **Step 1: Fetch Linear Tasks**
-   - Read `skills/linear-to-ingestion-wrapper/SKILL.md`
-   - Execute the commands using exec() tool
-   - This writes raw task data to entity_issues table
-   
+   - Read the skill instructions at `skills/linear-to-ingestion-wrapper/SKILL.md`
+   - Execute each bash command from the skill using exec(), passing `RUN_ID` as needed
+   - This fetches assigned Linear tasks and writes them to the data ingestion service
+
    **Step 2: Analyze Criticality**
-   - Read `skills/task-criticality-analyzer/SKILL.md`
-   - Execute the commands using exec() tool
-   - This reads entity_issues, scores tasks, writes to result_metrics
-   
+   - Read the skill instructions at `skills/task-criticality-analyzer/SKILL.md`
+   - Execute the commands using exec()
+   - This reads entity_issues, scores tasks, writes criticality metrics
+
    **Step 3: Build Digest**
-   - Read `skills/task-digest-builder/SKILL.md`
-   - Execute the commands using exec() tool
+   - Read the skill instructions at `skills/task-digest-builder/SKILL.md`
+   - Execute the commands using exec()
    - This queries result_metrics, sorts by (due date, criticality), formats top-10
-   
+   - The digest is saved to `/tmp/digest_${RUN_ID}.txt`
+
    **Step 4: Send to Telegram**
-   - Read `skills/telegram-sender/SKILL.md`
+   - Read the skill instructions at `skills/telegram-sender/SKILL.md`
+   - Read the digest from `/tmp/digest_${RUN_ID}.txt` using exec()
    - Use the message() tool to deliver the digest:
      ```
-     message(action="send", 
-             channel="telegram", 
-             target=process.env.TELEGRAM_CHAT_ID, 
-             message=<digest_markdown>)
+     message(action="send",
+             channel="telegram",
+             target="${TELEGRAM_CHAT_ID}",
+             message=<digest_content>)
      ```
+   - If message() tool is unavailable, fall back to posting the digest in-chat
 
 3. **Verify Success:**
-   - Check that each step completes without error
+   - Check that each exec() command returns exit code 0
    - If any step fails, log the error and stop (don't send partial digest)
+   - Clean up temp files: `rm -f /tmp/*_${RUN_ID}.*`
 
 ### Error Handling
 

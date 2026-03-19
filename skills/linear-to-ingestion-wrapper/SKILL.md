@@ -7,8 +7,8 @@ metadata:
   openclaw:
     requires:
       bins: [linear, curl, python3]
-      env: [LINEAR_API_KEY, DATA_INGESTION_BASE_URL, DATA_INGESTION_ORG_ID, DATA_INGESTION_AGENT_ID, RUN_ID]
-    primaryEnv: LINEAR_API_KEY
+      env: [LINEAR_API_KEY, LINEAR_TOKEN, DATA_INGESTION_BASE_URL, DATA_INGESTION_ORG_ID, DATA_INGESTION_AGENT_ID, RUN_ID]
+    primaryEnv: LINEAR_TOKEN
 ---
 
 # Linear → Data Ingestion Wrapper
