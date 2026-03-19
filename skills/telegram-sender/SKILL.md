@@ -1,19 +1,18 @@
 ---
 name: telegram-sender
-version: 2.0.0
-description: "Sends formatted digest to Telegram via Bot API (curl)."
+version: 3.0.0
+description: "Sends formatted digest to Telegram via openclaw message send CLI."
 user-invocable: false
 metadata:
   openclaw:
     requires:
-      bins: [curl]
-      env: [TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, RUN_ID]
-    primaryEnv: TELEGRAM_BOT_TOKEN
+      env: [TELEGRAM_CHAT_ID, RUN_ID]
+    primaryEnv: TELEGRAM_CHAT_ID
 ---
 
 # Telegram Digest Sender
 
-Delivers the formatted task digest to your Telegram using the Telegram Bot API directly via curl.
+Delivers the formatted task digest to your Telegram using OpenClaw's native `openclaw message send` CLI.
 
 ## Usage
 
@@ -26,55 +25,54 @@ cat /tmp/digest_${RUN_ID}.txt
 
 If the file doesn't exist, use the digest content you already have from the previous step.
 
-### Step 2: Send to Telegram via Bot API
+### Step 2: Send to Telegram via OpenClaw CLI
 
-Use `exec()` to run this curl command. The env vars `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are automatically available.
+Use `exec()` to run this command. The `TELEGRAM_CHAT_ID` env var is automatically available.
 
 ```bash
-DIGEST=$(cat /tmp/digest_${RUN_ID}.txt 2>/dev/null || echo "No digest file found")
-curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-  -d chat_id="${TELEGRAM_CHAT_ID}" \
-  --data-urlencode "text=${DIGEST}"
+openclaw message send \
+  --channel telegram \
+  --target "${TELEGRAM_CHAT_ID}" \
+  --message "$(cat /tmp/digest_${RUN_ID}.txt)" \
+  --json
 ```
 
-**Important:** Use `--data-urlencode` for the text field to handle newlines and special characters correctly.
+**Important:** This uses OpenClaw's native Telegram integration — the bot token is already configured in channels.telegram. No need to pass the bot token here.
+
+### Alternative: Send inline text (no temp file)
+
+If you built the digest in memory rather than saving to a file:
+
+```bash
+openclaw message send \
+  --channel telegram \
+  --target "${TELEGRAM_CHAT_ID}" \
+  --message "YOUR_DIGEST_TEXT_HERE" \
+  --json
+```
 
 ### Step 3: Verify and Cleanup
 
-```bash
-# Check the curl response for "ok":true
-# Then cleanup temp files
-rm -f /tmp/digest_${RUN_ID}.txt /tmp/tasks_${RUN_ID}.json /tmp/metrics_${RUN_ID}.json /tmp/entity_issues_${RUN_ID}.json /tmp/linear_tasks_${RUN_ID}.json
-```
-
-## Alternative: Inline Digest (no temp file)
-
-If you built the digest in memory rather than a file, send it directly:
-
-```bash
-curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-  -d chat_id="${TELEGRAM_CHAT_ID}" \
-  --data-urlencode "text=YOUR_DIGEST_TEXT_HERE"
-```
-
-## Expected Response
-
-A successful send returns:
+Check the response for `"ok":true`:
 ```json
-{"ok":true,"result":{"message_id":123,...}}
+{"action":"send","channel":"telegram","payload":{"ok":true,"messageId":"123","chatId":"..."}}
 ```
 
-If you get `{"ok":false,"error_code":401}`, the bot token is invalid.
-If you get `{"ok":false,"error_code":400}`, the chat_id is wrong.
+Then cleanup:
+```bash
+rm -f /tmp/digest_${RUN_ID}.txt /tmp/tasks_${RUN_ID}.json /tmp/metrics_${RUN_ID}.json
+```
 
 ## Error Handling
 
-If curl fails or returns `"ok":false`:
-- Report the error in chat: "Failed to send digest to Telegram: [error details]"
-- Post the digest content in-chat as fallback so the user still sees it
+If `openclaw message send` fails:
+- Check that Telegram channel is configured: `openclaw channels status --probe`
+- Check that TELEGRAM_CHAT_ID is set correctly (numeric user ID)
+- Fall back to posting the digest content in-chat so the user still sees it
 
 ## Notes
 
-- Uses Telegram Bot API directly via curl — works in ALL contexts (chat, cron, embedded)
-- No dependency on OpenClaw's message() tool or channel sessions
-- Env vars are injected by OpenClaw from the config automatically
+- Uses `openclaw message send` CLI — OpenClaw's native channel system
+- Works in ALL contexts: chat, cron, embedded, dashboard
+- Bot token is managed by OpenClaw channels config (not passed as env var here)
+- TELEGRAM_CHAT_ID tells OpenClaw WHO to send to

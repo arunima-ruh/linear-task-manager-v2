@@ -61,15 +61,12 @@ When you receive **"Run daily Linear task digest workflow"**, execute these step
    **Step 4: Send to Telegram**
    - Read the skill instructions at `skills/telegram-sender/SKILL.md`
    - Read the digest from `/tmp/digest_${RUN_ID}.txt` using exec()
-   - Send via Telegram Bot API using exec() and curl:
+   - Send via OpenClaw's native message CLI using exec():
      ```bash
-     DIGEST=$(cat /tmp/digest_${RUN_ID}.txt)
-     curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-       -d chat_id="${TELEGRAM_CHAT_ID}" \
-       --data-urlencode "text=${DIGEST}"
+     openclaw message send --channel telegram --target "${TELEGRAM_CHAT_ID}" --message "$(cat /tmp/digest_${RUN_ID}.txt)" --json
      ```
    - Check the response for `"ok":true` to confirm delivery
-   - If curl fails, post the digest content in-chat as fallback
+   - If sending fails, post the digest content in-chat as fallback
 
 3. **Verify Success:**
    - Check that each exec() command returns exit code 0
