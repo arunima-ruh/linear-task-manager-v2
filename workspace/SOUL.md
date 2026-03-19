@@ -61,14 +61,15 @@ When you receive **"Run daily Linear task digest workflow"**, execute these step
    **Step 4: Send to Telegram**
    - Read the skill instructions at `skills/telegram-sender/SKILL.md`
    - Read the digest from `/tmp/digest_${RUN_ID}.txt` using exec()
-   - Use the message() tool to deliver the digest:
+   - Send via Telegram Bot API using exec() and curl:
+     ```bash
+     DIGEST=$(cat /tmp/digest_${RUN_ID}.txt)
+     curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+       -d chat_id="${TELEGRAM_CHAT_ID}" \
+       --data-urlencode "text=${DIGEST}"
      ```
-     message(action="send",
-             channel="telegram",
-             target="${TELEGRAM_CHAT_ID}",
-             message=<digest_content>)
-     ```
-   - If message() tool is unavailable, fall back to posting the digest in-chat
+   - Check the response for `"ok":true` to confirm delivery
+   - If curl fails, post the digest content in-chat as fallback
 
 3. **Verify Success:**
    - Check that each exec() command returns exit code 0
