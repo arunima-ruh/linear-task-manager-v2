@@ -98,7 +98,9 @@ records = []
 
 for task in tasks:
     impact = 0
-    text = f"{task.get(\"title\",\"\")} {task.get(\"description\",\"\")}".lower()
+    title = task.get("title", "")
+    desc = task.get("description", "")
+    text = f"{title} {desc}".lower()
     if any(kw in text for kw in ["urgent","immediate","critical","blocker","asap"]):
         impact += 20
 
@@ -234,7 +236,8 @@ for i, task in enumerate(tasks[:10], 1):
     due_display = due[:10] if due else "No date"
     project = task.get("project_name") or "No project"
 
-    lines.append(f"{i}. {label} {task.get(\"title\", \"Untitled\")}")
+    task_title = task.get("title", "Untitled")
+    lines.append(f"{i}. {label} {task_title}")
     lines.append(f"   📁 {project} | 📅 {due_display} | Score: {crit:.0f}/100")
     lines.append("")
 
