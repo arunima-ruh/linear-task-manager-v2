@@ -1,35 +1,52 @@
+# Lobster Workflow for Linear Task Manager
+# This workflow is REFERENCE ONLY — the actual orchestration is in workspace/SOUL.md
+# OpenClaw agents execute workflows by reading SOUL.md instructions, not by interpreting this YAML
+
 name: linear-task-manager
-version: 1.0.0
+version: 2.0.0
 description: "Daily Linear task prioritization and Telegram delivery"
 
 trigger:
-  cron: "30 2 * * *"  # 8:00 AM IST (2:30 AM UTC)
+  type: cron
+  schedule: "30 2 * * *"  # 8:00 AM IST (2:30 AM UTC)
+  message: "Run daily Linear task digest workflow"
 
 steps:
+  - id: provision-schema
+    name: "Provision Database Schema"
+    type: exec
+    command: "python3 scripts/data_writer.py provision"
+    continue_on_error: false
+
   - id: fetch
     name: "Fetch Linear Tasks"
+    type: skill
     skill: linear-to-ingestion-wrapper
-    timeout: 120s
+    depends_on: [provision-schema]
+    timeout: 120
 
   - id: analyze
     name: "Analyze Criticality"
+    type: skill
     skill: task-criticality-analyzer
     depends_on: [fetch]
-    timeout: 180s
+    timeout: 180
 
   - id: digest
     name: "Build Digest"
+    type: skill
     skill: task-digest-builder
     depends_on: [analyze]
-    timeout: 60s
+    timeout: 60
 
   - id: send
     name: "Send to Telegram"
+    type: skill
     skill: telegram-sender
     depends_on: [digest]
-    timeout: 30s
+    timeout: 30
 
-  - id: finalize
-    name: "Mark Run Complete"
-    command: echo "Run complete - RUN_ID=${RUN_ID}"
-    depends_on: [send]
+on_failure:
+  - type: message
+    channel: telegram
+    message: "❌ Daily Linear task digest failed. Check logs for details."

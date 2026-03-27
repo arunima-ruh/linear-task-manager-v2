@@ -1,0 +1,140 @@
+# result-schema.yml — Data contract for linear-task-manager
+# Defines what tables the data_writer.py creates and manages.
+# Read by scripts/data_writer.py on `provision` command.
+
+version: "1.0"
+agent_id: "linear-task-manager"
+
+tables:
+  result_task_scores:
+    description: "Criticality scores for each Linear task per run"
+    writable: true
+    write_mode: upsert
+    columns:
+      id:
+        type: uuid
+        primary_key: true
+        auto_generate: true
+      run_id:
+        type: uuid
+        required: true
+        description: "Reference to the agent run"
+      task_id:
+        type: string
+        required: true
+        description: "Linear task ID / issue key"
+        max_length: 100
+      title:
+        type: string
+        required: true
+        description: "Task title"
+        max_length: 500
+      priority:
+        type: string
+        required: false
+        description: "P1-P4 or None"
+        max_length: 10
+      due_date:
+        type: string
+        required: false
+        description: "Due date ISO string"
+        max_length: 50
+      impact_score:
+        type: float
+        required: true
+        description: "Impact score (0-50)"
+      complexity_score:
+        type: float
+        required: true
+        description: "Complexity score (0-50)"
+      criticality_score:
+        type: float
+        required: true
+        description: "Combined score (0-100)"
+      status:
+        type: string
+        required: false
+        description: "Task status from Linear"
+        max_length: 50
+      project_name:
+        type: string
+        required: false
+        description: "Linear project name"
+        max_length: 255
+      scoring_details:
+        type: jsonb
+        required: false
+        description: "Breakdown of scoring components"
+      computed_at:
+        type: datetime
+        required: false
+        auto_generate: true
+    conflict_columns:
+      - task_id
+      - run_id
+    indexes:
+      - columns: [task_id, run_id]
+        name: idx_task_scores_task_run
+
+  result_daily_digests:
+    description: "Generated daily digests sent to Telegram"
+    writable: true
+    write_mode: insert
+    columns:
+      id:
+        type: uuid
+        primary_key: true
+        auto_generate: true
+      run_id:
+        type: uuid
+        required: true
+        description: "Reference to the agent run"
+      digest_date:
+        type: string
+        required: true
+        description: "Date of the digest (YYYY-MM-DD)"
+        max_length: 20
+      total_tasks:
+        type: integer
+        required: true
+        description: "Total tasks fetched"
+      tasks_in_digest:
+        type: integer
+        required: true
+        description: "Tasks included in top-10 digest"
+      top_task_id:
+        type: string
+        required: false
+        description: "Highest priority task ID"
+        max_length: 100
+      top_task_score:
+        type: float
+        required: false
+        description: "Highest criticality score"
+      avg_criticality:
+        type: float
+        required: false
+        description: "Average criticality across all tasks"
+      overdue_count:
+        type: integer
+        required: false
+        description: "Number of overdue tasks"
+      digest_json:
+        type: jsonb
+        required: false
+        description: "Full digest content as JSON"
+      delivery_status:
+        type: string
+        required: true
+        description: "sent | failed"
+        max_length: 20
+      computed_at:
+        type: datetime
+        required: false
+        auto_generate: true
+    conflict_columns: []
+    indexes:
+      - columns: [run_id]
+        name: idx_daily_digests_run_id
+      - columns: [digest_date]
+        name: idx_daily_digests_date
