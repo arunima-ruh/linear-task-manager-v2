@@ -21,7 +21,7 @@ Every morning at 8:00 AM IST, you:
 ## Workflow Orchestration
 
 You have access to these skills:
-- `linear-to-ingestion-wrapper`: Fetches Linear tasks via linear-cli, saves to temp file
+- `linear-to-ingestion-wrapper`: Fetches Linear tasks via GraphQL API, saves to temp file
 - `task-criticality-analyzer`: Scores tasks on impact + complexity, writes to result_task_scores
 - `task-digest-builder`: Queries scored tasks, sorts, formats top-10, writes to result_daily_digests
 - `telegram-sender`: Delivers digest via message() tool
@@ -45,35 +45,40 @@ When you receive **"Run daily Linear task digest workflow"**, execute these step
 
 3. **Execute Workflow Steps (in order):**
 
-   **IMPORTANT:** All env vars (LINEAR_API_KEY, LINEAR_TOKEN, DATA_INGESTION_BASE_URL, etc.)
-   are automatically available in exec() commands — they are injected by OpenClaw from the
-   config. You do NOT need to export or source them. Just use `${VAR_NAME}` in bash commands.
+   **CRITICAL EXECUTION RULE:** For each step below, you MUST:
+   1. Read the SKILL.md file using exec() to cat it
+   2. Copy the EXACT bash code blocks from the SKILL.md
+   3. Run them VERBATIM using exec() — do NOT rewrite, simplify, or generate your own version
+   4. Do NOT use sample/demo data — the bash blocks fetch REAL data from Linear API
+
+   Each SKILL.md bash block starts with env var resolution lines (OC=/root/.openclaw/openclaw.json + jq exports).
+   These MUST be included — they ensure env vars are available regardless of execution context.
 
    **Step 1: Fetch Linear Tasks**
-   - Read `skills/linear-to-ingestion-wrapper/SKILL.md`
-   - Execute the commands using exec() tool
-   - This fetches tasks from Linear API and saves to `/tmp/tasks_${RUN_ID}.json`
+   - `cat skills/linear-to-ingestion-wrapper/SKILL.md`
+   - Execute EACH bash block from the SKILL.md in order using exec()
+   - First block: resolves env vars and calls Linear GraphQL API via curl
+   - Second block: transforms raw tasks to standard format via python3
+   - Result: `/tmp/tasks_${RUN_ID}.json` with REAL Linear tasks
 
    **Step 2: Analyze Criticality**
-   - Read `skills/task-criticality-analyzer/SKILL.md`
-   - Execute the commands using exec() tool
-   - This reads tasks, scores them, writes to `result_task_scores` via `scripts/data_writer.py write`
+   - `cat skills/task-criticality-analyzer/SKILL.md`
+   - Execute EACH bash block from the SKILL.md in order using exec()
+   - First block: calculates criticality scores from tasks
+   - Second block: writes scores to database via `python3 scripts/data_writer.py write`
+   - Result: scored tasks in `/tmp/scored_tasks_${RUN_ID}.json` AND written to `result_task_scores` table
 
    **Step 3: Build Digest**
-   - Read `skills/task-digest-builder/SKILL.md`
-   - Execute the commands using exec() tool
-   - This queries `result_task_scores`, sorts by (due date, criticality), formats top-10, writes summary to `result_daily_digests`
+   - `cat skills/task-digest-builder/SKILL.md`
+   - Execute EACH bash block from the SKILL.md in order using exec()
+   - First block: queries scored tasks from database via `python3 scripts/data_writer.py query`
+   - Second block: formats top-10 digest
+   - Third block: writes digest summary to `result_daily_digests` table
+   - Result: `/tmp/digest_${RUN_ID}.txt` with formatted digest
 
    **Step 4: Send to Telegram**
-   - Read `skills/telegram-sender/SKILL.md`
-   - Use the message() tool to deliver the digest:
-     ```
-     message(action="send",
-             channel="telegram",
-             target=process.env.TELEGRAM_CHAT_ID,
-             message=<digest_markdown>)
-     ```
-   - Check the response for `"ok":true` to confirm delivery
+   - `cat skills/telegram-sender/SKILL.md`
+   - Execute the bash blocks to read the digest and send via `openclaw message send`
    - If sending fails, post the digest content in-chat as fallback
 
 4. **Verify Success:**
@@ -163,7 +168,7 @@ python3 scripts/data_writer.py query \
 ## Data Flow
 
 ```
-Linear API → linear-cli → wrapper skill → /tmp/tasks_${RUN_ID}.json
+Linear GraphQL API → curl → wrapper skill → /tmp/tasks_${RUN_ID}.json
                                             ↓
                               analyzer reads tasks → writes result_task_scores (via data_writer.py)
                                             ↓
