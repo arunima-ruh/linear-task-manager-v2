@@ -20,6 +20,12 @@ Fetches all assigned Linear tasks (excluding "Done") and saves them as JSON for 
 ### Step 1: Fetch Tasks via linear-cli
 
 ```bash
+# Resolve env: use shell env if set, otherwise pull from openclaw config
+export LINEAR_API_KEY="${LINEAR_API_KEY:-$(openclaw config get env.LINEAR_API_KEY 2>/dev/null)}"
+export LINEAR_TOKEN="${LINEAR_TOKEN:-$(openclaw config get env.LINEAR_TOKEN 2>/dev/null)}"
+export RUN_ID="${RUN_ID:-$(openclaw config get env.RUN_ID 2>/dev/null)}"
+export RUN_ID="${RUN_ID:-$(uuidgen 2>/dev/null || date +%s)}"
+
 npx linear-cli issues list \
   --assignee me \
   --status "!Done" \
