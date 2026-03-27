@@ -20,9 +20,11 @@ Fetches all assigned Linear tasks (excluding "Done") and saves them as JSON for 
 ### Step 1: Fetch Tasks via Linear GraphQL API
 
 ```bash
-# Resolve env: use shell env if set, otherwise pull from openclaw config
-export LINEAR_API_KEY="${LINEAR_API_KEY:-$(openclaw config get env.LINEAR_API_KEY 2>/dev/null)}"
-export RUN_ID="${RUN_ID:-$(openclaw config get env.RUN_ID 2>/dev/null)}"
+# Resolve env: use shell env if set, otherwise read from openclaw.json directly
+# (openclaw config get redacts sensitive values, so we use jq instead)
+OC=/root/.openclaw/openclaw.json
+export LINEAR_API_KEY="${LINEAR_API_KEY:-$(jq -r '.env.LINEAR_API_KEY // empty' $OC 2>/dev/null)}"
+export RUN_ID="${RUN_ID:-$(jq -r '.env.RUN_ID // empty' $OC 2>/dev/null)}"
 export RUN_ID="${RUN_ID:-$(uuidgen 2>/dev/null || date +%s)}"
 
 curl -s -X POST https://api.linear.app/graphql \

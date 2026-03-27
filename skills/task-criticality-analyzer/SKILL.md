@@ -19,14 +19,16 @@ Scores tasks on impact (urgency keywords + priority + due date) and complexity (
 ### Step 1: Calculate Criticality Scores
 
 ```bash
-# Resolve env: use shell env if set, otherwise pull from openclaw config
-export RUN_ID="${RUN_ID:-$(openclaw config get env.RUN_ID 2>/dev/null)}"
+# Resolve env: use shell env if set, otherwise read from openclaw.json directly
+# (openclaw config get redacts sensitive values, so we use jq instead)
+OC=/root/.openclaw/openclaw.json
+export RUN_ID="${RUN_ID:-$(jq -r '.env.RUN_ID // empty' $OC 2>/dev/null)}"
 export RUN_ID="${RUN_ID:-$(uuidgen 2>/dev/null || date +%s)}"
-export SUPABASE_URL="${SUPABASE_URL:-$(openclaw config get env.SUPABASE_URL 2>/dev/null)}"
-export SUPABASE_KEY="${SUPABASE_KEY:-$(openclaw config get env.SUPABASE_KEY 2>/dev/null)}"
-export PG_CONNECTION_STRING="${PG_CONNECTION_STRING:-$(openclaw config get env.PG_CONNECTION_STRING 2>/dev/null)}"
-export ORG_ID="${ORG_ID:-$(openclaw config get env.ORG_ID 2>/dev/null)}"
-export AGENT_ID="${AGENT_ID:-$(openclaw config get env.AGENT_ID 2>/dev/null)}"
+export SUPABASE_URL="${SUPABASE_URL:-$(jq -r '.env.SUPABASE_URL // empty' $OC 2>/dev/null)}"
+export SUPABASE_KEY="${SUPABASE_KEY:-$(jq -r '.env.SUPABASE_KEY // empty' $OC 2>/dev/null)}"
+export PG_CONNECTION_STRING="${PG_CONNECTION_STRING:-$(jq -r '.env.PG_CONNECTION_STRING // empty' $OC 2>/dev/null)}"
+export ORG_ID="${ORG_ID:-$(jq -r '.env.ORG_ID // empty' $OC 2>/dev/null)}"
+export AGENT_ID="${AGENT_ID:-$(jq -r '.env.AGENT_ID // empty' $OC 2>/dev/null)}"
 
 python3 -c '
 import json, os
@@ -112,12 +114,13 @@ print(json.dumps({"total_scored": len(records), "run_id": RUN_ID}))
 ### Step 2: Write Scores to Database
 
 ```bash
-# Resolve env for data_writer.py (uses SUPABASE_URL/KEY or PG_CONNECTION_STRING)
-export SUPABASE_URL="${SUPABASE_URL:-$(openclaw config get env.SUPABASE_URL 2>/dev/null)}"
-export SUPABASE_KEY="${SUPABASE_KEY:-$(openclaw config get env.SUPABASE_KEY 2>/dev/null)}"
-export PG_CONNECTION_STRING="${PG_CONNECTION_STRING:-$(openclaw config get env.PG_CONNECTION_STRING 2>/dev/null)}"
-export ORG_ID="${ORG_ID:-$(openclaw config get env.ORG_ID 2>/dev/null)}"
-export AGENT_ID="${AGENT_ID:-$(openclaw config get env.AGENT_ID 2>/dev/null)}"
+# Resolve env for data_writer.py
+OC=/root/.openclaw/openclaw.json
+export SUPABASE_URL="${SUPABASE_URL:-$(jq -r '.env.SUPABASE_URL // empty' $OC 2>/dev/null)}"
+export SUPABASE_KEY="${SUPABASE_KEY:-$(jq -r '.env.SUPABASE_KEY // empty' $OC 2>/dev/null)}"
+export PG_CONNECTION_STRING="${PG_CONNECTION_STRING:-$(jq -r '.env.PG_CONNECTION_STRING // empty' $OC 2>/dev/null)}"
+export ORG_ID="${ORG_ID:-$(jq -r '.env.ORG_ID // empty' $OC 2>/dev/null)}"
+export AGENT_ID="${AGENT_ID:-$(jq -r '.env.AGENT_ID // empty' $OC 2>/dev/null)}"
 
 python3 scripts/data_writer.py write \
   --table result_task_scores \
