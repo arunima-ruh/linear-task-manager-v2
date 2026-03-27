@@ -6,7 +6,7 @@ user-invocable: false
 metadata:
   openclaw:
     requires:
-      bins: [npx, python3]
+      bins: [curl, jq, python3]
       env: [LINEAR_API_KEY, RUN_ID]
     primaryEnv: LINEAR_API_KEY
 ---
@@ -17,19 +17,19 @@ Fetches all assigned Linear tasks (excluding "Done") and saves them as JSON for 
 
 ## Usage
 
-### Step 1: Fetch Tasks via linear-cli
+### Step 1: Fetch Tasks via Linear GraphQL API
 
 ```bash
 # Resolve env: use shell env if set, otherwise pull from openclaw config
 export LINEAR_API_KEY="${LINEAR_API_KEY:-$(openclaw config get env.LINEAR_API_KEY 2>/dev/null)}"
-export LINEAR_TOKEN="${LINEAR_TOKEN:-$(openclaw config get env.LINEAR_TOKEN 2>/dev/null)}"
 export RUN_ID="${RUN_ID:-$(openclaw config get env.RUN_ID 2>/dev/null)}"
 export RUN_ID="${RUN_ID:-$(uuidgen 2>/dev/null || date +%s)}"
 
-npx linear-cli issues list \
-  --assignee me \
-  --status "!Done" \
-  --format json \
+curl -s -X POST https://api.linear.app/graphql \
+  -H "Content-Type: application/json" \
+  -H "Authorization: ${LINEAR_API_KEY}" \
+  -d '{"query": "{ viewer { assignedIssues(filter: { state: { type: { nin: [\"completed\", \"canceled\"] } } }, first: 100) { nodes { id identifier title description priority dueDate estimate url state { name } project { name } labels { nodes { name } } } } } }"}' \
+  | jq '.data.viewer.assignedIssues.nodes' \
   > /tmp/linear_raw_${RUN_ID}.json 2>/dev/null
 
 echo "Fetched $(jq '. | length' /tmp/linear_raw_${RUN_ID}.json) tasks"
@@ -94,6 +94,6 @@ print(json.dumps({"total_tasks": len(tasks), "run_id": RUN_ID}))
 
 ## Error Handling
 
-- If linear-cli is not installed → `npx` will auto-install it
-- If LINEAR_API_KEY is invalid → linear-cli exits with auth error
+- If LINEAR_API_KEY is invalid → GraphQL API returns auth error
 - If no tasks found → saves empty array `[]` (not an error)
+- If curl fails → check network connectivity to api.linear.app
