@@ -30,61 +30,20 @@ You have access to these skills:
 
 When you receive **"Run daily Linear task digest workflow"**, execute these steps:
 
-1. **Set Run ID:**
-   Use exec() to generate a unique run ID. Use `uuidgen` if available, otherwise use a date-based fallback:
+1. **Run the workflow script:**
+
+   Execute this SINGLE command using exec(). It handles everything — env resolution, Linear API fetch, scoring, DB writes, digest, and Telegram delivery:
+
    ```bash
-   export RUN_ID=$(uuidgen 2>/dev/null || date +%s-%N)
+   cd /root/agents/linear-task-manager-v2 && bash scripts/run_workflow.sh
    ```
-   All subsequent skill commands in this workflow must use this same RUN_ID.
 
-2. **Provision Database (first run only):**
-   ```bash
-   python3 scripts/data_writer.py provision
-   ```
-   This creates your result tables if they don't exist: `result_task_scores`, `result_daily_digests`.
+   **DO NOT** write your own workflow steps. **DO NOT** generate sample data. The script fetches REAL data from Linear's GraphQL API and writes REAL scores to the database. Just run it and report the output.
 
-3. **Execute Workflow Steps (in order):**
-
-   **CRITICAL EXECUTION RULE:** For each step below, you MUST:
-   1. Read the SKILL.md file using exec() to cat it
-   2. Copy the EXACT bash code blocks from the SKILL.md
-   3. Run them VERBATIM using exec() — do NOT rewrite, simplify, or generate your own version
-   4. Do NOT use sample/demo data — the bash blocks fetch REAL data from Linear API
-
-   Each SKILL.md bash block starts with env var resolution lines (OC=/root/.openclaw/openclaw.json + jq exports).
-   These MUST be included — they ensure env vars are available regardless of execution context.
-
-   **Step 1: Fetch Linear Tasks**
-   - `cat skills/linear-to-ingestion-wrapper/SKILL.md`
-   - Execute EACH bash block from the SKILL.md in order using exec()
-   - First block: resolves env vars and calls Linear GraphQL API via curl
-   - Second block: transforms raw tasks to standard format via python3
-   - Result: `/tmp/tasks_${RUN_ID}.json` with REAL Linear tasks
-
-   **Step 2: Analyze Criticality**
-   - `cat skills/task-criticality-analyzer/SKILL.md`
-   - Execute EACH bash block from the SKILL.md in order using exec()
-   - First block: calculates criticality scores from tasks
-   - Second block: writes scores to database via `python3 scripts/data_writer.py write`
-   - Result: scored tasks in `/tmp/scored_tasks_${RUN_ID}.json` AND written to `result_task_scores` table
-
-   **Step 3: Build Digest**
-   - `cat skills/task-digest-builder/SKILL.md`
-   - Execute EACH bash block from the SKILL.md in order using exec()
-   - First block: queries scored tasks from database via `python3 scripts/data_writer.py query`
-   - Second block: formats top-10 digest
-   - Third block: writes digest summary to `result_daily_digests` table
-   - Result: `/tmp/digest_${RUN_ID}.txt` with formatted digest
-
-   **Step 4: Send to Telegram**
-   - `cat skills/telegram-sender/SKILL.md`
-   - Execute the bash blocks to read the digest and send via `openclaw message send`
-   - If sending fails, post the digest content in-chat as fallback
-
-4. **Verify Success:**
-   - Check that each step completes without error
-   - If any step fails, log the error and stop (don't send partial digest)
-   - Clean up temp files: `rm -f /tmp/*_${RUN_ID}.*`
+2. **Report results:**
+   - Show the user the digest output from the script
+   - If any step failed, report the error
+   - The script handles cleanup automatically
 
 ### Error Handling
 
